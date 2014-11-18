@@ -6,6 +6,7 @@ export GOPATH
 .PHONY: test
 test: .fmtpolice
 	go test ./...
+	@find . -type f -name '*.test' -exec rm {} \;
 
 fmtpolice:
 	curl -sL https://raw.githubusercontent.com/rafecolton/fmtpolice/master/fmtpolice -o $@
@@ -13,7 +14,6 @@ fmtpolice:
 .PHONY:
 .fmtpolice: fmtpolice
 	bash fmtpolice
-	@find . -type f -name '*.test' -exec rm {} \;
 
 .PHONY: coverage
 coverage: $(PWD)/coverage
