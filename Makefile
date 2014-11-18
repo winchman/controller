@@ -7,10 +7,6 @@ export GOPATH
 test: .fmtpolice
 	go test ./...
 
-.PHONY: integration
-integration: .fmtpolice
-	INTEGRATION=1 go test ./...
-
 fmtpolice:
 	curl -sL https://raw.githubusercontent.com/rafecolton/fmtpolice/master/fmtpolice -o $@
 
@@ -18,14 +14,6 @@ fmtpolice:
 .fmtpolice: fmtpolice
 	bash fmtpolice
 	@find . -type f -name '*.test' -exec rm {} \;
-
-$(GOPATH)/bin/deppy:
-	go get -u github.com/hamfist/deppy
-
-.PHONY: get
-get: $(GOPATH)/bin/deppy
-	go get -d -t ./...
-	deppy restore
 
 .PHONY: coverage
 coverage: $(PWD)/coverage
