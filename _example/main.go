@@ -29,7 +29,7 @@ blocks:
 
 func main() {
 	options := buildcontroller.BuildPackageOptions{}
-	options.Url = "https://github.com/josephschorr/testmultibuild/archive/master.zip"
+	options.URL = "https://github.com/josephschorr/testmultibuild/archive/master.zip"
 	options.SubDirectory = "testmultibuild-master"
 
 	err := buildcontroller.InvokeBuild(testConfig, options)
