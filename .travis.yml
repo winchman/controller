@@ -1,10 +1,9 @@
----
 language: go
 sudo: false
 matrix:
   fast_finish: true
   allow_failures:
-    - go: tip
+  - go: tip
 go:
 - 1.2.2
 - 1.3.1
@@ -15,3 +14,6 @@ script:
 - make test
 after_success:
 - make goveralls
+env:
+  global:
+    secure: DepdjoOONBxAPs5K+i76vwDuLEvScB4n2Drx5oi7PX6rrtNPMcQkI0RiupRjZNizEadNT0xMAejdE8Mhpo0T2XKR0//OK1wE/g6lUK8wozftk6/ppRKCOk5ydV13xi+I4WjGD9qPes/ueXSC5me/tV1cVgGZkE/9J5YGlEbPVyw=
