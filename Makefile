@@ -15,6 +15,14 @@ fmtpolice:
 .fmtpolice: fmtpolice
 	bash fmtpolice
 
+$(GOPATH)/bin/deppy:
+	go get -u github.com/hamfist/deppy
+
+.PHONY: get
+get: $(GOPATH)/bin/deppy
+	go get -d -t ./...
+	deppy restore
+
 .PHONY: coverage
 coverage: $(PWD)/coverage
 	go get -u code.google.com/p/go.tools/cmd/cover || go get -u golang.org/x/tools/cmd/cover
