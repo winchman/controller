@@ -2,11 +2,26 @@ package buildcontroller
 
 import (
 	"errors"
+	"fmt"
 	"github.com/sylphon/builder-core"
 	"github.com/sylphon/builder-core/unit-config"
 	"github.com/sylphon/graph-builder"
 	"log"
 )
+
+// PushCredentials for specifying the default credentials when pushing images.
+type PushCredentials struct {
+	Username string
+	Password string
+}
+
+// InvokeBuildOptions are options for invoking a build in the controller.
+type InvokeBuildOptions struct {
+	Registry               string
+	ProjectName            string
+	BuildPackage           BuildPackageOptions
+	DefaultPushCredentials PushCredentials
+}
 
 type buildResultStruct struct {
 	job      *buildgraph.Job
@@ -15,7 +30,7 @@ type buildResultStruct struct {
 
 // InvokeBuild starts a full build, with the jobs described in the yamlConfig and the build
 // context described by the given options.
-func InvokeBuild(yamlConfig string, buildPackage BuildPackageOptions) error {
+func InvokeBuild(yamlConfig string, options InvokeBuildOptions) error {
 	// Parse a graph from the YAML build config.
 	graph, err := buildgraph.ParseGraphFromYAML([]byte(yamlConfig))
 	if err != nil {
@@ -33,32 +48,65 @@ func InvokeBuild(yamlConfig string, buildPackage BuildPackageOptions) error {
 	}
 
 	// Load the build package.
-	buildPackageDirectory, err := CreateBuildPackageDirectory(buildPackage)
+	buildPackageDirectory, err := CreateBuildPackageDirectory(options.BuildPackage)
 	if err != nil {
 		return err
 	}
 
 	// Start the initial build units.
-	return invokeBuild(graph, initialJobs, buildPackageDirectory)
+	return invokeBuild(graph, initialJobs, buildPackageDirectory, options)
 }
 
-func buildUnitConfig(job *buildgraph.Job) *unitconfig.UnitConfig {
+func buildUnitConfig(job *buildgraph.Job, options InvokeBuildOptions) (*unitconfig.UnitConfig, error) {
+	// Determine a project name for the unit. The project name is determined by one of three
+	// settings:
+	//  - The job's push info image name
+	//  - The job's image name
+	//  - The overall project name (but only if this is a skip-push step; otherwise, we want it to
+	//    be explicit)
+	projectName := job.PushInfo.Image
+	if projectName == "" {
+		projectName = job.ImageName
+	}
+
+	if projectName == "" {
+		if job.SkipPush {
+			projectName = options.ProjectName
+		} else {
+			return nil, fmt.Errorf("Missing ImageName for non-SkipPush unit %s", job.Name)
+		}
+	}
+
+	// Read the credentials for the push.
+	username := options.DefaultPushCredentials.Username
+	password := options.DefaultPushCredentials.Password
+
+	if job.PushInfo.Credentials.Username != "" {
+		username = job.PushInfo.Credentials.Username
+	}
+
+	if job.PushInfo.Credentials.Password != "" {
+		password = job.PushInfo.Credentials.Password
+	}
+
 	return &unitconfig.UnitConfig{
 		Version: 1,
 		ContainerArr: []*unitconfig.ContainerSection{
 			&unitconfig.ContainerSection{
 				Name:       job.Name,
 				Dockerfile: job.Dockerfile,
-				Registry:   "quay.io/rafecolton", // TODO: read this from the config.
-				Project:    job.ImageName,        // TODO: Generate this if not specified (but only for skippush true)
+				Registry:   options.Registry,
+				Project:    projectName,
 				Tags:       job.Tags,
 				SkipPush:   job.SkipPush,
+				CfgUn:      username,
+				CfgPass:    password,
 			},
 		},
-	}
+	}, nil
 }
 
-func invokeBuild(graph *buildgraph.Graph, initialJobs []*buildgraph.Job, buildPackageDirectory string) error {
+func invokeBuild(graph *buildgraph.Graph, initialJobs []*buildgraph.Job, buildPackageDirectory string, options InvokeBuildOptions) error {
 	currentJobs := initialJobs
 	var finishedJobs []*buildgraph.Job
 	var brokenJobs []*buildgraph.Job
@@ -71,7 +119,10 @@ func invokeBuild(graph *buildgraph.Graph, initialJobs []*buildgraph.Job, buildPa
 		// concurrently.
 		log.Printf("Jobs to run: %d", len(currentJobs))
 		for _, job := range currentJobs {
-			unitConfig := buildUnitConfig(job)
+			unitConfig, err := buildUnitConfig(job, options)
+			if err != nil {
+				return err
+			}
 
 			go func() {
 				log.Printf("Starting Job: %s", job.Name)
