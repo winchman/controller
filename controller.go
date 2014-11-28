@@ -23,8 +23,7 @@ func InvokeBuild(yamlConfig string, buildPackage BuildPackageOptions) error {
 	}
 
 	// Find the initial set of units to build.
-	var empty []*buildgraph.Job
-	initialJobs, err := graph.GetDependants(empty, empty)
+	initialJobs, err := graph.GetDependants(nil, nil)
 	if err != nil {
 		return err
 	}
@@ -51,7 +50,7 @@ func buildUnitConfig(job *buildgraph.Job) *unitconfig.UnitConfig {
 				Name:       job.Name,
 				Dockerfile: job.Dockerfile,
 				Registry:   "quay.io/rafecolton", // TODO: read this from the config.
-				Project:    job.ImageName,
+				Project:    job.ImageName,        // TODO: Generate this if not specified (but only for skippush true)
 				Tags:       job.Tags,
 				SkipPush:   job.SkipPush,
 			},
@@ -74,14 +73,14 @@ func invokeBuild(graph *buildgraph.Graph, initialJobs []*buildgraph.Job, buildPa
 		for _, job := range currentJobs {
 			unitConfig := buildUnitConfig(job)
 
-			go (func() {
+			go func() {
 				log.Printf("Starting Job: %s", job.Name)
 				jobError := runner.RunBuildSynchronously(unitConfig, buildPackageDirectory)
 				done <- buildResultStruct{
 					job:      job,
 					jobError: jobError,
 				}
-			})()
+			}()
 		}
 
 		// Wait for each of the jobs to complete. As each job completes, add it to the finished

@@ -20,10 +20,10 @@ type BuildPackageOptions struct {
 
 // CreateBuildPackageDirectory creates a directory on disk containing a build package for use
 // by 'docker build'.
-func CreateBuildPackageDirectory(buildPackage BuildPackageOptions) (string, error) {
+func CreateBuildPackageDirectory(buildPackageOptions BuildPackageOptions) (string, error) {
 	// Load the build package from the URL.
-	log.Printf("Preparing build package: %s", buildPackage.URL)
-	resp, err := http.Get(buildPackage.URL)
+	log.Printf("Preparing build package: %s", buildPackageOptions.URL)
+	resp, err := http.Get(buildPackageOptions.URL)
 	if err != nil {
 		return "", err
 	}
@@ -37,7 +37,7 @@ func CreateBuildPackageDirectory(buildPackage BuildPackageOptions) (string, erro
 	}
 
 	// Extract the build package into a reader stream.
-	directory, err := extractBuildPackage(resp.Body, mimeType, buildPackage.SubDirectory)
+	directory, err := extractBuildPackage(resp.Body, mimeType, buildPackageOptions.SubDirectory)
 	if err != nil {
 		return "", err
 	}
@@ -52,14 +52,13 @@ func extractFromArchive(body io.ReadCloser, helper extractor.Extractor, subDirec
 		return "", err
 	}
 
+	defer archiveFile.Close()
+
 	log.Printf("Downloading build package archive to %s", archiveFile.Name())
 	_, err = io.Copy(archiveFile, body)
 	if err != nil {
 		return "", err
 	}
-
-	archiveFile.Close()
-	body.Close()
 
 	// Create a temporary directory for the build pack.
 	tempDirectory, err := ioutil.TempDir("", "build_pack")
@@ -74,12 +73,7 @@ func extractFromArchive(body io.ReadCloser, helper extractor.Extractor, subDirec
 		return "", err
 	}
 
-	rootLocation := tempDirectory
-	if subDirectory != "" {
-		rootLocation = path.Join(rootLocation, subDirectory)
-	}
-
-	return rootLocation, nil
+	return path.Join(tempDirectory, subDirectory), nil
 }
 
 func extractBuildPackage(body io.ReadCloser, mimeType string, subDirectory string) (string, error) {
