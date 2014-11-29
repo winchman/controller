@@ -81,11 +81,8 @@ func buildUnitConfig(job *buildgraph.Job, options InvokeBuildOptions) (*unitconf
 	username := options.DefaultPushCredentials.Username
 	password := options.DefaultPushCredentials.Password
 
-	if job.PushInfo.Credentials.Username != "" {
+	if job.PushInfo.Credentials.Username != "" && job.PushInfo.Credentials.Password != "" {
 		username = job.PushInfo.Credentials.Username
-	}
-
-	if job.PushInfo.Credentials.Password != "" {
 		password = job.PushInfo.Credentials.Password
 	}
 
