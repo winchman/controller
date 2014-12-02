@@ -11,7 +11,6 @@ blocks:
     skip_push: true
     disable_cache: true
     dockerfile: Dockerfile.first
-    image_name: first
   - name: block-B
     image_name: second
     requires:
@@ -21,18 +20,21 @@ blocks:
     tags:
       - latest
     push_info:
-      image: quay.io/namespace/repo:latest
+      image: repo
       credentials:
         username: fakeuser
         password: fakepass
 `
 
 func main() {
-	options := buildcontroller.BuildPackageOptions{}
-	options.URL = "https://github.com/josephschorr/testmultibuild/archive/master.zip"
-	options.SubDirectory = "testmultibuild-master"
-
-	err := buildcontroller.InvokeBuild(testConfig, options)
+	err := buildcontroller.InvokeBuild(testConfig, buildcontroller.InvokeBuildOptions{
+		BuildPackage: buildcontroller.BuildPackageOptions{
+			URL:          "https://github.com/josephschorr/testmultibuild/archive/master.zip",
+			SubDirectory: "testmultibuild-master",
+		},
+		ProjectName: "exampleproject",
+		Registry:    "quay.io/sylphon",
+	})
 
 	if err != nil {
 		log.Printf("%s", err)
