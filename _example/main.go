@@ -8,10 +8,10 @@ import (
 const testConfig = `
 blocks:
   - name: block-A
-    skip_push: true
     disable_cache: true
     dockerfile: Dockerfile.first
   - name: block-B
+    push_image: true
     image_name: second
     requires:
       - block-A
@@ -33,7 +33,7 @@ func main() {
 			SubDirectory: "testmultibuild-master",
 		},
 		ProjectName: "exampleproject",
-		Registry:    "quay.io/sylphon",
+		Registry:    "quay.io/winchman",
 	})
 
 	if err != nil {
